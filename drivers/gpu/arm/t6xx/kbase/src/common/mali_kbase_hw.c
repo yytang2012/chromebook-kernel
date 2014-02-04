@@ -55,7 +55,7 @@ mali_error kbase_hw_set_issues_mask(kbase_device *kbdev)
 	case GPU_ID_MAKE(GPU_ID_PI_T62X, 1, 0, 0):
 	case GPU_ID_MAKE(GPU_ID_PI_T62X, 1, 0, 1):
 		issues = base_hw_issues_t62x_r1p0;
-		break;
+ 		break;
 	case GPU_ID_MAKE(GPU_ID_PI_T67X, 0, 0, 0):
 	case GPU_ID_MAKE(GPU_ID_PI_T67X, 0, 0, 1):
 		issues = base_hw_issues_t67x_r0p0;

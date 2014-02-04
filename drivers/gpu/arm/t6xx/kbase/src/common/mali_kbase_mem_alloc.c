@@ -25,8 +25,6 @@
 #include <linux/mm.h>
 #include <linux/atomic.h>
 
-atomic_t mali_memory_pages;
-
 STATIC int kbase_mem_allocator_shrink(struct shrinker *s, struct shrink_control *sc)
 {
 	kbase_mem_allocator * allocator;
@@ -134,7 +132,7 @@ mali_error kbase_mem_allocator_alloc(kbase_mem_allocator *allocator, u32 nr_page
 	}
 
 	if (i == nr_pages)
-		goto alloc_success;
+		return MALI_ERROR_NONE;
 
 	/* If not all pages were sourced from the pool, request new ones. */
 	for (; i < nr_pages; i++)
@@ -156,8 +154,6 @@ mali_error kbase_mem_allocator_alloc(kbase_mem_allocator *allocator, u32 nr_page
 		pages[i] = PFN_PHYS(page_to_pfn(p));
 	}
 
-alloc_success:
-	atomic_add(nr_pages, &mali_memory_pages);
 	return MALI_ERROR_NONE;
 
 err_out_roll_back:
@@ -188,9 +184,10 @@ void kbase_mem_allocator_free(kbase_mem_allocator *allocator, u32 nr_pages, phys
 	/* Starting by just freeing the overspill.
 	* As we do this outside of the lock we might spill too many pages
 	* or get too many on the free list, but the max_size is just a ballpark so it is ok
+	* providing that tofree doesn't exceed nr_pages
 	*/
-	tofree = atomic_read(&allocator->free_list_size) + nr_pages - allocator->free_list_max_size;
-	/* if tofree became negative this first for loop will be ignored */
+	tofree = MAX((int)allocator->free_list_max_size - atomic_read(&allocator->free_list_size),0);
+	tofree = nr_pages - MIN(tofree, nr_pages);
 	for (; i < tofree; i++)
 	{
 		if (likely(0 != pages[i]))
@@ -228,10 +225,10 @@ void kbase_mem_allocator_free(kbase_mem_allocator *allocator, u32 nr_pages, phys
 			page_count++;
 		}
 	}
-	atomic_sub(nr_pages, &mali_memory_pages);
 	mutex_lock(&allocator->free_list_lock);
 	list_splice(&new_free_list_items, &allocator->free_list_head);
 	atomic_add(page_count, &allocator->free_list_size);
 	mutex_unlock(&allocator->free_list_lock);
 }
 KBASE_EXPORT_TEST_API(kbase_mem_allocator_free)
+

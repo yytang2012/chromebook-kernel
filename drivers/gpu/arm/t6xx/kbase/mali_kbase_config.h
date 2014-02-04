@@ -223,11 +223,10 @@ enum {
 	KBASE_CONFIG_ATTR_JS_SOFT_STOP_TICKS,
 
 	/**
-	 * Job Scheduler minimum number of scheduling ticks before Soft-Stoppable
-	 * (BASE_JD_REQ_NSS bit \b clear) jobs are hard-stopped.
+	 * Job Scheduler minimum number of scheduling ticks before jobs are hard-stopped.
 	 *
-	 * This defines the amount of time a Soft-Stoppable job is allowed to spend
-	 * on the GPU before it is killed. Such jobs won't be resumed if killed.
+	 * This defines the amount of time a job is allowed to spend on the GPU before it
+	 * is killed. Such jobs won't be resumed if killed.
 	 *
 	 * This value is supported by the following scheduling policies:
 	 * - The Completely Fair Share (CFS) policy
@@ -243,11 +242,11 @@ enum {
 	KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS,
 
 	/**
-	 * Job Scheduler minimum number of scheduling ticks before Non-Soft-Stoppable
-	 * (BASE_JD_REQ_NSS bit \b set) jobs are hard-stopped.
+	 * Job Scheduler minimum number of scheduling ticks before jobs are hard-stopped
+	 * when dumping.
 	 *
-	 * This defines the amount of time a Non-Soft-Stoppable job is allowed to spend
-	 * on the GPU before it is killed. Such jobs won't be resumed if killed.
+	 * This defines the amount of time a job is allowed to spend on the GPU before it
+	 * is killed. Such jobs won't be resumed if killed.
 	 *
 	 * This value is supported by the following scheduling policies:
 	 * - The Completely Fair Share (CFS) policy
@@ -336,14 +335,13 @@ enum {
 	KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_MIN_SLICES,
 
 	/**
-	 * Job Scheduler minimum number of scheduling ticks before Soft-Stoppable
-	 * (BASE_JD_REQ_NSS bit \b clear) jobs cause the GPU to be reset.
+	 * Job Scheduler minimum number of scheduling ticks before jobs cause the GPU to be
+	 * reset.
 	 *
-	 * This defines the amount of time a Soft-Stoppable job is allowed to spend
-	 * on the GPU before it is assumed that the GPU has hung and needs to be reset.
-	 * The assumes that the job has been hard-stopped already and so the presence of
-	 * a job that has remained on the GPU for so long indicates that the GPU has in some
-	 * way hung.
+	 * This defines the amount of time a job is allowed to spend on the GPU before it 
+	 * is assumed that the GPU has hung and needs to be reset. The assumes that the job
+	 * has been hard-stopped already and so the presence of a job that has remained on
+	 * the GPU for so long indicates that the GPU has in some way hung.
 	 *
 	 * This value is supported by the following scheduling policies:
 	 * - The Completely Fair Share (CFS) policy
@@ -356,14 +354,13 @@ enum {
 	KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS,
 
 	/**
-	 * Job Scheduler minimum number of scheduling ticks before Non-Soft-Stoppable
-	 * (BASE_JD_REQ_NSS bit \b set) jobs cause the GPU to be reset.
+	 * Job Scheduler minimum number of scheduling ticks before jobs cause the GPU to be
+	 * reset when dumping.
 	 *
-	 * This defines the amount of time a Non-Soft-Stoppable job is allowed to spend
-	 * on the GPU before it is assumed that the GPU has hung and needs to be reset.
-	 * The assumes that the job has been hard-stopped already and so the presence of
-	 * a job that has remained on the GPU for so long indicates that the GPU has in some
-	 * way hung.
+	 * This defines the amount of time a job is allowed to spend on the GPU before it
+	 * is assumed that the GPU has hung and needs to be reset. The assumes that the job
+	 * has been hard-stopped already and so the presence of a job that has remained on 
+	 * the GPU for so long indicates that the GPU has in some way hung.
 	 *
 	 * This value is supported by the following scheduling policies:
 	 * - The Completely Fair Share (CFS) policy
@@ -488,8 +485,40 @@ enum {
 	 * Attached value: u32 value
 	 * Default value: 500 Milliseconds
 	 */
-
 	KBASE_CONFIG_ATTR_POWER_MANAGEMENT_DVFS_FREQ,
+
+	/**
+	 * Power Management poweroff tick granuality. This is in nanoseconds to
+	 * allow HR timer support.
+	 *
+	 * On each scheduling tick, the power manager core may decide to:
+	 * -# Power off one or more shader cores
+	 * -# Power off the entire GPU
+	 *
+	 * Attached value: number in nanoseconds
+	 * Default value: @ref DEFAULT_PM_GPU_POWEROFF_TICK_NS,
+	 */
+	KBASE_CONFIG_ATTR_PM_GPU_POWEROFF_TICK_NS,
+
+	/**
+	 * Power Manager number of ticks before shader cores are powered off
+	 *
+	 * Attached value: unsigned 32-bit kbasep_pm_device_data::poweroff_shader_ticks<br>
+	 * Default value: @ref DEFAULT_PM_POWEROFF_TICK_SHADER
+	 *
+	 * @see KBASE_CONFIG_ATTR_PM_GPU_POWEROFF_TICK_NS
+	 */
+	KBASE_CONFIG_ATTR_PM_POWEROFF_TICK_SHADER,
+
+	/**
+	 * Power Manager number of ticks before GPU is powered off
+	 *
+	 * Attached value: unsigned 32-bit kbasep_pm_device_data::poweroff_gpu_ticks<br>
+	 * Default value: @ref DEFAULT_PM_POWEROFF_TICK_GPU
+	 *
+	 * @see KBASE_CONFIG_ATTR_PM_GPU_POWEROFF_TICK_NS
+	 */
+	KBASE_CONFIG_ATTR_PM_POWEROFF_TICK_GPU,
 
 	/**
 	 * End of attribute list indicator.
@@ -640,36 +669,6 @@ typedef struct kbase_pm_callback_conf {
 	 * @return 1 if the GPU state may have been lost, 0 otherwise.
 	 */
 	int (*power_on_callback) (struct kbase_device *kbdev);
-
-	/** Callback for when the system is requesting a suspend and GPU power
-	 * must be switched off.
-	 *
-	 * Note that if this callback is present, then this may be called
-	 * without a preceding call to power_off_callback. Therefore this
-	 * callback must be able to take any action that might otherwise happen
-	 * in power_off_callback.
-	 *
-	 * The platform specific private pointer kbase_device::platform_context
-	 * can be accessed and modified in here. It is the platform \em
-	 * callbacks responsibility to initialize and terminate this pointer if
-	 * used (see @ref kbase_platform_funcs_conf).
-	 */
-	void (*power_suspend_callback) (struct kbase_device *kbdev);
-
-	/** Callback for when the system is resuming from a suspend and GPU
-	 * power must be switched on.
-	 *
-	 * Note that if this callback is present, then this may be called
-	 * without a following call to power_on_callback. Therefore this
-	 * callback must be able to take any action that might otherwise happen
-	 * in power_on_callback.
-	 *
-	 * The platform specific private pointer kbase_device::platform_context
-	 * can be accessed and modified in here. It is the platform \em
-	 * callbacks responsibility to initialize and terminate this pointer if
-	 * used (see @ref kbase_platform_funcs_conf).
-	 */
-	void (*power_resume_callback) (struct kbase_device *kbdev);
 
 	/** Callback for handling runtime power management initialization.
 	 *
@@ -823,7 +822,7 @@ mali_bool kbasep_validate_configuration_attributes(struct kbase_device *kbdev, c
  *
  * @return Pointer to the platform config
  */
-kbase_platform_config *kbasep_get_platform_config(void);
+kbase_platform_config *kbase_get_platform_config(void);
 #endif				/* CONFIG_MALI_PLATFORM_FAKE */
 
 /**

@@ -1,12 +1,19 @@
 /*
- * This confidential and proprietary software may be used only as
- * authorised by a licensing agreement from ARM Limited
- * (C) COPYRIGHT 2013 ARM Limited
- * ALL RIGHTS RESERVED
- * The entire notice above must be reproduced on all authorised
- * copies and copies may only be made to the extent permitted
- * by a licensing agreement from ARM Limited.
+ *
+ * (C) COPYRIGHT 2013 ARM Limited. All rights reserved.
+ *
+ * This program is free software and is provided to you under the terms of the
+ * GNU General Public License version 2 as published by the Free Software
+ * Foundation, and any use by you of this program is subject to the terms
+ * of such GNU licence.
+ *
+ * A copy of the licence is included with the program, and can also be obtained
+ * from Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA  02110-1301, USA.
+ *
  */
+
+
 
 #include <kbase/src/common/mali_kbase.h>
 
@@ -36,7 +43,7 @@
 int kbasep_10969_workaround_clamp_coordinates(kbase_jd_atom *katom)
 {
 	u32   clamped = 0;
-	KBASE_DEBUG_PRINT_WARN(KBASE_JD,"Called TILE_RANGE_FAULT workaround clamping function.");
+	KBASE_DEBUG_PRINT_WARN(KBASE_JD,"Called TILE_RANGE_FAULT workaround clamping function. \n");
 	if (katom->core_req & BASE_JD_REQ_FS){
 		kbase_va_region * region = kbase_region_tracker_find_region_enclosing_address(katom->kctx, katom->jc );
 
@@ -60,19 +67,19 @@ int kbasep_10969_workaround_clamp_coordinates(kbase_jd_atom *katom)
 
 				page_1 = kmap_atomic(pfn_to_page(PFN_DOWN(page_array[page_index])));
 				if (!page_1){
-					KBASE_DEBUG_PRINT_WARN(KBASE_JD, "Restart Index clamping function not able to map page 1");
+					KBASE_DEBUG_PRINT_WARN(KBASE_JD, "Restart Index clamping function not able to map page 1 \n");
 					goto exit;
 				}
 				/* page_1 is a u32 pointer, offset is expressed in bytes */
 				page_1 += offset>>2;
 				kbase_sync_to_cpu(page_array[page_index] + offset, page_1, copy_size);
-				memcpy(dst, page_1, copy_size);
+				memcpy(dst, page_1, copy_size);				
 
 				/* The data needed overflows page the dimension, need to map the subsequent page */
 				if (copy_size < JOB_HEADER_SIZE){
 					page_2 = kmap_atomic(pfn_to_page(PFN_DOWN(page_array[page_index + 1])));
 					if (!page_2){
-						KBASE_DEBUG_PRINT_WARN(KBASE_JD, "Restart Index clamping function not able to map page 2");
+						KBASE_DEBUG_PRINT_WARN(KBASE_JD, "Restart Index clamping function not able to map page 2 \n");
 						kunmap_atomic(page_1);
 						goto exit;
 					}
@@ -98,7 +105,7 @@ int kbasep_10969_workaround_clamp_coordinates(kbase_jd_atom *katom)
 							                 "restartIdx: %08x  \n" \
 							                 "Fault_addr_low: %08x \n" \
 							                 "minCoordsX: %08x minCoordsY: %08x \n" \
-							                 "maxCoordsX: %08x maxCoordsY: %08x",
+							                 "maxCoordsX: %08x maxCoordsY: %08x \n", 
 							       job_header[JOB_DESC_STATUS_WORD],
 							       job_header[JOB_DESC_RESTART_INDEX_WORD],
 							       job_header[JOB_DESC_FAULT_ADDR_LOW_WORD],
@@ -145,7 +152,7 @@ int kbasep_10969_workaround_clamp_coordinates(kbase_jd_atom *katom)
 							                         "restartIdx: %08x  \n"                 \
 							                         "Fault_addr_low: %08x \n"              \
 							                         "minCoordsX: %08x minCoordsY: %08x \n" \
-							                         "maxCoordsX: %08x maxCoordsY: %08x",
+							                         "maxCoordsX: %08x maxCoordsY: %08x \n", 
 							               job_header[JOB_DESC_STATUS_WORD],
 							               job_header[JOB_DESC_RESTART_INDEX_WORD],
 							               job_header[JOB_DESC_FAULT_ADDR_LOW_WORD],
@@ -163,7 +170,7 @@ int kbasep_10969_workaround_clamp_coordinates(kbase_jd_atom *katom)
 
 					}
 				}
-				if (copy_size < JOB_HEADER_SIZE)
+				if (copy_size < JOB_HEADER_SIZE) 
 					kunmap_atomic(page_2);
 
 				kunmap_atomic(page_1);

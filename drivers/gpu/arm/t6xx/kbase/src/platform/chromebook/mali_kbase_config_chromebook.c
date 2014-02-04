@@ -313,6 +313,18 @@ struct exynos_context
 	int t6xx_default_clock;
 };
 
+static kbase_io_resources io_resources_exynos5250 =
+{
+    .job_irq_number   = EXYNOS5_JOB_IRQ_NUMBER,
+    .mmu_irq_number   = EXYNOS5_MMU_IRQ_NUMBER,
+    .gpu_irq_number   = EXYNOS5_GPU_IRQ_NUMBER,
+    .io_memory_region =
+    {
+        .start = EXYNOS5_PA_G3D,
+        .end   = EXYNOS5_PA_G3D + (4096 * 5) - 1
+    }
+};
+
 /**
  * Read the CPU clock speed
  */
@@ -361,8 +373,8 @@ static kbase_pm_callback_conf pm_callbacks =
 {
 	.power_on_callback = pm_callback_power_on,
 	.power_off_callback = pm_callback_power_off,
-	.power_suspend_callback = pm_callback_suspend,
-	.power_resume_callback = NULL
+	//.power_suspend_callback = pm_callback_suspend,
+	//.power_resume_callback = NULL
 };
 
 /**
@@ -496,7 +508,17 @@ const kbase_attribute config_attributes_exynos5420[] = {
 	}
 };
 
-kbase_platform_config platform_config;
+kbase_platform_config chromebook_platform_config;
+kbase_platform_config *kbase_get_platform_config(void) {
+    if (soc_is_exynos5250())
+    {
+        chromebook_platform_config.attributes = config_attributes_exynos5250;
+        chromebook_platform_config.io_resources = &io_resources_exynos5250;
+        chromebook_platform_config.midgard_type = KBASE_MALI_T604;
+        return &chromebook_platform_config;
+    }
+    return NULL;
+}
 
 static struct clk *clk_g3d = NULL;
 
@@ -897,9 +919,6 @@ static ssize_t mali_sysfs_show_memory(struct device *dev,
 
 	if (!kbdev)
 		return -ENODEV;
-
-	ret = sprintf(buf, "%lu bytes\n",
-		      atomic_read(&mali_memory_pages) * PAGE_SIZE);
 
 	return ret;
 }

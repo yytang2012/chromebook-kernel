@@ -362,8 +362,8 @@ mali_error kbase_add_va_region(kbase_context *kctx, struct kbase_va_region *reg,
 
 		if ((!kbase_region_tracker_match_zone(tmp, reg)) || (!(tmp->flags & KBASE_REG_FREE))) {
 			KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "Zone mismatch: %lu != %lu", tmp->flags & KBASE_REG_ZONE_MASK, reg->flags & KBASE_REG_ZONE_MASK);
-			KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "!(tmp->flags & KBASE_REG_FREE): tmp->start_pfn=0x%llx tmp->flags=0x%lx tmp->nr_pages=0x%x gpu_pfn=0x%llx nr_pages=0x%x", tmp->start_pfn, tmp->flags, tmp->nr_pages, gpu_pfn, nr_pages);
-			KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "in function %s (%p, %p, 0x%llx, 0x%x, 0x%x)", __func__, kctx, reg, addr, nr_pages, align);
+			KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "!(tmp->flags & KBASE_REG_FREE): tmp->start_pfn=0x%llx tmp->flags=0x%lx tmp->nr_pages=0x%x gpu_pfn=0x%llx nr_pages=0x%x\n", tmp->start_pfn, tmp->flags, tmp->nr_pages, gpu_pfn, nr_pages);
+			KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "in function %s (%p, %p, 0x%llx, 0x%x, 0x%x)\n", __func__, kctx, reg, addr, nr_pages, align);
 			err = MALI_ERROR_OUT_OF_GPU_MEMORY;
 			goto exit;
 		}
@@ -535,7 +535,7 @@ mali_error kbase_mem_usage_request_pages(kbasep_mem_usage *usage, u32 nr_pages)
 		/* enough pages to fullfill the request? */
 		if (usage->max_pages - nr_pages < cur_pages) {
  usage_cap_exceeded:
-			KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "Memory usage cap has been reached:\n" "\t%lu pages currently used\n" "\t%lu pages usage cap\n" "\t%lu new pages requested\n" "\twould result in %lu pages over the cap", (unsigned long)cur_pages, (unsigned long)usage->max_pages, (unsigned long)nr_pages, (unsigned long)(cur_pages + nr_pages - usage->max_pages));
+			KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "Memory usage cap has been reached:\n" "\t%lu pages currently used\n" "\t%lu pages usage cap\n" "\t%lu new pages requested\n" "\twould result in %lu pages over the cap\n", (unsigned long)cur_pages, (unsigned long)usage->max_pages, (unsigned long)nr_pages, (unsigned long)(cur_pages + nr_pages - usage->max_pages));
 			return MALI_ERROR_OUT_OF_MEMORY;
 		}
 
@@ -806,7 +806,7 @@ static void kbase_dump_mappings(struct kbase_va_region *reg)
 
 	list_for_each(pos, &reg->map_list) {
 		map = list_entry(pos, kbase_cpu_mapping, link);
-		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "uaddr %p nr_pages %d page_off %016llx vma %p", map->uaddr, map->nr_pages, map->page_off, map->private);
+		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "uaddr %p nr_pages %d page_off %016llx vma %p\n", map->uaddr, map->nr_pages, map->page_off, map->private);
 	}
 }
 
@@ -820,7 +820,7 @@ mali_error kbase_cpu_free_mapping(struct kbase_va_region *reg, struct vm_area_st
 	KBASE_DEBUG_ASSERT(NULL != reg);
 	map = kbase_find_cpu_mapping(reg, vma);
 	if (!map) {
-		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "Freeing unknown mapping %p in region %p", vma, (void *)reg);
+		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "Freeing unknown mapping %p in region %p\n", vma, (void *)reg);
 		kbase_dump_mappings(reg);
 		err = MALI_ERROR_FUNCTION_FAILED;
 		goto out;
@@ -961,7 +961,7 @@ mali_error kbase_sync_now(kbase_context *kctx, struct base_syncset *syncset)
 		break;
 
 	default:
-		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "Unknown msync op %d", sset->type);
+		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "Unknown msync op %d\n", sset->type);
 		break;
 	}
 
@@ -1005,7 +1005,7 @@ mali_error kbase_mem_free_region(kbase_context *kctx, kbase_va_region *reg)
 
 	err = kbase_gpu_munmap(kctx, reg);
 	if (err) {
-		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "Could not unmap from the GPU...");
+		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "Could not unmap from the GPU...\n");
 		goto out;
 	}
 
@@ -1037,7 +1037,7 @@ mali_error kbase_mem_free(kbase_context *kctx, mali_addr64 gpu_addr)
 	KBASE_DEBUG_ASSERT(kctx != NULL);
 
 	if (0 == gpu_addr) {
-		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "gpu_addr 0 is reserved for the ringbuffer and it's an error to try to free it using kbase_mem_free");
+		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "gpu_addr 0 is reserved for the ringbuffer and it's an error to try to free it using kbase_mem_free\n");
 		return MALI_ERROR_FUNCTION_FAILED;
 	}
 	kbase_gpu_vm_lock(kctx);
@@ -1060,7 +1060,7 @@ mali_error kbase_mem_free(kbase_context *kctx, mali_addr64 gpu_addr)
 		/* Validate the region */
 		reg = kbase_region_tracker_find_region_base_address(kctx, gpu_addr);
 		if (!reg) {
-			KBASE_DEBUG_ASSERT_MSG(0, "Trying to free nonexistent region: 0x%llX", gpu_addr);
+			KBASE_DEBUG_ASSERT_MSG(0, "Trying to free nonexistent region\n 0x%llX", gpu_addr);
 			err = MALI_ERROR_FUNCTION_FAILED;
 			goto out_unlock;
 		}
@@ -1424,7 +1424,7 @@ struct kbase_va_region *kbase_tmem_alloc(kbase_context *kctx, u32 vsize, u32 psi
 	kbase_gpu_vm_unlock(kctx);
 
 	if (err) {
-		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "kbase_gpu_mmap failed");
+		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "kbase_gpu_mmap failed\n");
 		goto out3;
 	}
 
@@ -1759,7 +1759,7 @@ static struct kbase_va_region *kbase_tmem_from_ump(kbase_context *kctx, ump_secu
 	kbase_gpu_vm_unlock(kctx);
 
 	if (err) {
-		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "kbase_gpu_mmap failed");
+		KBASE_DEBUG_PRINT_WARN(KBASE_MEM, "kbase_gpu_mmap failed\n");
 		goto out3;
 	}
 
@@ -1872,6 +1872,144 @@ struct kbase_va_region *kbase_tmem_import(kbase_context *kctx, base_tmem_import_
 		return NULL;
 	}
 }
+
+mali_error kbase_tmem_set_attributes(kbase_context *kctx, mali_addr64 gpu_addr, u32  attributes )
+{
+	kbase_va_region *reg;
+	u32 requested_attributes = 0;
+	u32 prev_attributes = 0;
+	mali_error       ret = MALI_ERROR_FUNCTION_FAILED;
+
+	KBASE_DEBUG_ASSERT(NULL != kctx);
+
+	if( 0 == gpu_addr )
+		return ret;
+
+	kbase_gpu_vm_lock(kctx);
+
+	/* Find the region */
+	reg = kbase_region_tracker_find_region_base_address(kctx, gpu_addr);
+	if (!reg || (reg->flags & KBASE_REG_FREE))
+			goto out_unlock;
+
+	/* Verify if this is actually a tmem region */
+	if( !(reg->flags & KBASE_REG_ZONE_TMEM) )
+		goto out_unlock;
+
+	/* Verify if this is an imported tmem region, even if the flags are not
+	 * being updated */
+	if( reg->imported_type == BASE_TMEM_IMPORT_TYPE_INVALID )
+		goto out_unlock;
+
+	/* Verify if there is anything to be updated and if the attributes are valid */
+
+	/* Get the attributes ( only ) */
+	if( BASE_MEM_COHERENT_SYSTEM & attributes )
+		requested_attributes |= KBASE_REG_SHARE_BOTH;
+	else if ( BASE_MEM_COHERENT_LOCAL & attributes )
+		requested_attributes |= KBASE_REG_SHARE_IN;
+
+	if ( requested_attributes != ( reg->flags & (KBASE_REG_SHARE_BOTH | KBASE_REG_SHARE_IN)) )
+	{
+		prev_attributes = reg->flags;
+		reg->flags &= ~(KBASE_REG_SHARE_BOTH|KBASE_REG_SHARE_IN);
+		reg->flags |= requested_attributes;
+	}
+	else
+	{
+		/* Nothing to be updated - leave */
+		ret = MALI_ERROR_NONE;
+		goto out_unlock;
+	}
+
+	/* Currently supporting only imported memory */
+	switch(reg->imported_type)
+	{
+#ifdef CONFIG_UMP
+	case BASE_TMEM_IMPORT_TYPE_UMP:
+		ret = kbase_mmu_update_pages(kctx, reg->start_pfn, kbase_get_phy_pages(reg), reg->nr_alloc_pages, reg->flags );
+		break;
+#endif
+#ifdef 	CONFIG_DMA_SHARED_BUFFER
+	case BASE_TMEM_IMPORT_TYPE_UMM:
+		ret = MALI_ERROR_NONE;
+		if(reg->imported_metadata.umm.current_mapping_usage_count)
+		{
+			/*Update the pages only if the dma buff is already mapped*/
+			KBASE_DEBUG_ASSERT(reg->imported_metadata.umm.dma_attachment);
+			KBASE_DEBUG_ASSERT(reg->imported_metadata.umm.st);
+
+			ret = kbase_mmu_update_pages(kctx, reg->start_pfn, kbase_get_phy_pages(reg), reg->nr_alloc_pages, reg->flags | KBASE_REG_GPU_WR | KBASE_REG_GPU_RD );
+
+		}
+
+		break;
+#endif
+	default:
+		KBASE_DEBUG_ASSERT_MSG(0,"Unreachable");
+		break;
+	}
+
+	if( MALI_ERROR_NONE != ret )
+	{
+		/* Rollback case failed to update page tables */
+		reg->flags = prev_attributes;
+	}
+
+out_unlock:
+	kbase_gpu_vm_unlock(kctx);
+	return ret;
+}
+KBASE_EXPORT_TEST_API(kbase_tmem_set_attributes)
+
+mali_error kbase_tmem_get_attributes(kbase_context *kctx, mali_addr64 gpu_addr, u32 * const attributes )
+{
+	kbase_va_region *reg;
+	u32 current_attributes = 0;
+	mali_error   ret = MALI_ERROR_FUNCTION_FAILED;
+
+	KBASE_DEBUG_ASSERT(NULL != kctx);
+	KBASE_DEBUG_ASSERT(NULL != attributes);
+
+	if( 0 == gpu_addr )
+		return ret;
+
+	kbase_gpu_vm_lock(kctx);
+
+	/* Find the region */
+	reg = kbase_region_tracker_find_region_base_address(kctx, gpu_addr);
+	if (!reg || (reg->flags & KBASE_REG_FREE))
+			goto out_unlock;
+
+	/* Verify if this is actually a tmem region */
+	if( !(reg->flags & KBASE_REG_ZONE_TMEM) )
+		goto out_unlock;
+
+	/* Verify if this is an imported memory */
+	if(reg->imported_type == BASE_TMEM_IMPORT_TYPE_INVALID)
+		goto out_unlock;
+
+	/* Get the attributes ( only ) */
+	if( KBASE_REG_GPU_WR & reg->flags )
+		current_attributes |= BASE_MEM_PROT_GPU_WR;
+	if( KBASE_REG_GPU_RD & reg->flags )
+		current_attributes |= BASE_MEM_PROT_GPU_RD;
+	if( ! (KBASE_REG_GPU_NX & reg->flags) )
+		current_attributes |= BASE_MEM_PROT_GPU_EX;
+	if( KBASE_REG_SHARE_BOTH & reg->flags )
+		current_attributes |= BASE_MEM_COHERENT_SYSTEM;
+	if ( KBASE_REG_SHARE_IN & reg->flags )
+		current_attributes |= BASE_MEM_COHERENT_LOCAL;
+
+	*attributes = current_attributes;
+	ret = MALI_ERROR_NONE;
+
+out_unlock:
+	kbase_gpu_vm_unlock(kctx);
+	return ret;
+}
+KBASE_EXPORT_TEST_API(kbase_tmem_get_attributes)
+
 
 /**
  * @brief Acquire the per-context region list lock

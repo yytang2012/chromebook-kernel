@@ -21,7 +21,6 @@
 #ifdef CONFIG_UMP
 #include <linux/ump-common.h>
 #endif				/* CONFIG_UMP */
-#include <plat/cpu.h>
 
 /* Specifies how many attributes are permitted in the config (excluding terminating attribute).
  * This is used in validation function so we can detect if configuration is properly terminated. This value can be
@@ -54,28 +53,27 @@
 #define DEFAULT_JS_SOFT_STOP_TICKS 1	/* Between 0.1 and 0.2s before soft-stop */
 
 /**
- * Default minimum number of scheduling ticks before Soft-Stoppable
- * (BASE_JD_REQ_NSS bit clear) jobs are hard-stopped
+ * Default minimum number of scheduling ticks before jobs are hard-stopped
  */
 #define DEFAULT_JS_HARD_STOP_TICKS_SS_HW_ISSUE_8408 12	/* 1.2s before hard-stop, for a certain GLES2 test at 128x128 (bound by combined vertex+tiler job) */
 #define DEFAULT_JS_HARD_STOP_TICKS_SS 2	/* Between 0.2 and 0.3s before hard-stop */
 
 /**
- * Default minimum number of scheduling ticks before Non-Soft-Stoppable
- * (BASE_JD_REQ_NSS bit set) jobs are hard-stopped
+ * Default minimum number of scheduling ticks before jobs are hard-stopped
+ * during dumping
  */
 #define DEFAULT_JS_HARD_STOP_TICKS_NSS 600	/* 60s @ 100ms tick */
 
 /**
  * Default minimum number of scheduling ticks before the GPU is reset
- * to clear a "stuck" Soft-Stoppable job
+ * to clear a "stuck" job
  */
 #define DEFAULT_JS_RESET_TICKS_SS_HW_ISSUE_8408 18	/* 1.8s before resetting GPU, for a certain GLES2 test at 128x128 (bound by combined vertex+tiler job) */
 #define DEFAULT_JS_RESET_TICKS_SS 3	/* 0.3-0.4s before GPU is reset */
 
 /**
  * Default minimum number of scheduling ticks before the GPU is reset
- * to clear a "stuck" Non-Soft-Stoppable job
+ * to clear a "stuck" job during dumping.
  */
 #define DEFAULT_JS_RESET_TICKS_NSS 601	/* 60.1s @ 100ms tick */
 
@@ -140,6 +138,21 @@
 
 #define DEFAULT_PM_DVFS_FREQ 500 /* Milliseconds */
 
+/**
+ * Default poweroff tick granuality, in nanoseconds
+ */
+#define DEFAULT_PM_GPU_POWEROFF_TICK_NS 400000 /* 400us */
+
+/**
+ * Default number of poweroff ticks before shader cores are powered off
+ */
+#define DEFAULT_PM_POWEROFF_TICK_SHADER 2      /* 400-800us */
+
+/**
+ * Default number of poweroff ticks before GPU is powered off
+ */
+#define DEFAULT_PM_POWEROFF_TICK_GPU 2         /* 400-800us */
+
 /*** End Power Manager defaults ***/
 
 /**
@@ -147,24 +160,6 @@
  * Points to @ref kbase_cpuprops_get_default_clock_speed.
  */
 #define DEFAULT_CPU_SPEED_FUNC ((uintptr_t)kbase_cpuprops_get_default_clock_speed)
-
-#ifdef CONFIG_MALI_PLATFORM_FAKE
-
-extern kbase_platform_config platform_config;
-extern const kbase_attribute config_attributes_exynos5250[];
-extern const kbase_attribute config_attributes_exynos5420[];
-
-kbase_platform_config *kbasep_get_platform_config(void)
-{
-	if (soc_is_exynos5250())
-		platform_config.attributes = config_attributes_exynos5250;
-	else if (soc_is_exynos542x())
-		platform_config.attributes = config_attributes_exynos5420;
-
-	platform_config.midgard_type = KBASE_MALI_T604;
-	return &platform_config;
-}
-#endif				/* CONFIG_MALI_PLATFORM_FAKE */
 
 int kbasep_get_config_attribute_count(const kbase_attribute *attributes)
 {
@@ -265,6 +260,13 @@ uintptr_t kbasep_get_config_value(struct kbase_device *kbdev, const kbase_attrib
 		return DEFAULT_ALTERNATIVE_HWC;
 	case KBASE_CONFIG_ATTR_POWER_MANAGEMENT_DVFS_FREQ:
 		return DEFAULT_PM_DVFS_FREQ;
+	case KBASE_CONFIG_ATTR_PM_GPU_POWEROFF_TICK_NS:
+		return DEFAULT_PM_GPU_POWEROFF_TICK_NS;
+	case KBASE_CONFIG_ATTR_PM_POWEROFF_TICK_SHADER:
+		return DEFAULT_PM_POWEROFF_TICK_SHADER;
+	case KBASE_CONFIG_ATTR_PM_POWEROFF_TICK_GPU:
+		return DEFAULT_PM_POWEROFF_TICK_GPU;
+
 	default:
 		KBASE_DEBUG_PRINT_ERROR(KBASE_CORE, "kbasep_get_config_value. Cannot get value of attribute with id=%d and no default value defined", attribute_id);
 		return 0;
@@ -559,6 +561,27 @@ mali_bool kbasep_validate_configuration_attributes(kbase_device *kbdev, const kb
 #if CSTD_CPU_64BIT
 			if ((u64) attributes[i].data > (u64) U32_MAX) {
 				KBASE_DEBUG_PRINT_WARN(KBASE_CORE, "PM DVFS interval exceeds 32-bits: " "id==%d val==%d", attributes[i].id, (int)attributes[i].data);
+				return MALI_FALSE;
+			}
+#endif
+			break;
+
+		case KBASE_CONFIG_ATTR_PM_GPU_POWEROFF_TICK_NS:
+#if CSTD_CPU_64BIT
+			if (attributes[i].data == 0u || (u64) attributes[i].data > (u64) U32_MAX) {
+#else
+			if (attributes[i].data == 0u) {
+#endif
+				KBASE_DEBUG_PRINT_WARN(KBASE_CORE, "Invalid Power Manager Configuration attribute for " "KBASE_CONFIG_ATTR_PM_GPU_POWEROFF_TICK_NS: %d", (int)attributes[i].data);
+				return MALI_FALSE;
+			}
+			break;
+
+	case KBASE_CONFIG_ATTR_PM_POWEROFF_TICK_SHADER:
+	case KBASE_CONFIG_ATTR_PM_POWEROFF_TICK_GPU:
+#if CSTD_CPU_64BIT
+			if ((u64) attributes[i].data > (u64) U32_MAX) {
+				KBASE_DEBUG_PRINT_WARN(KBASE_CORE, "Power Manager Configuration attribute exceeds 32-bits: " "id==%d val==%d", attributes[i].id, (int)attributes[i].data);
 				return MALI_FALSE;
 			}
 #endif

@@ -15,9 +15,23 @@
 
 
 
-#ifndef _KBASE_10969_WORKAROUND_
-#define _KBASE_10969_WORKAROUND_
+/**
+ * @file mali_kbase_pm_ca_fixed.h
+ * A power policy implementing fixed core availability
+ */
 
-int kbasep_10969_workaround_clamp_coordinates( kbase_jd_atom * katom );
+#ifndef MALI_KBASE_PM_CA_FIXED_H
+#define MALI_KBASE_PM_CA_FIXED_H
 
-#endif /* _KBASE_10969_WORKAROUND_ */
+/**
+ * Private structure for policy instance data.
+ *
+ * This contains data that is private to the particular power policy that is active.
+ */
+typedef struct kbasep_pm_ca_policy_fixed {
+	/** No state needed - just have a dummy variable here */
+	int dummy;
+} kbasep_pm_ca_policy_fixed;
+
+#endif /* MALI_KBASE_PM_CA_FIXED_H */
+

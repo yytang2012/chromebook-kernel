@@ -33,11 +33,11 @@
  */
 #define TRACE_BUFFER_HEADER_SPECIAL 0x45435254
 
-#ifdef CONFIG_MALI_PLATFORM_CONFIG_VEXPRESS
+#ifdef CONFIG_MALI_PLATFORM_VEXPRESS
 #ifdef CONFIG_MALI_PLATFORM_FAKE
 extern kbase_attribute config_attributes_hw_issue_8408[];
 #endif				/* CONFIG_MALI_PLATFORM_FAKE */
-#endif				/* CONFIG_MALI_PLATFORM_CONFIG_VEXPRESS */
+#endif				/* CONFIG_MALI_PLATFORM_VEXPRESS */
 
 #if KBASE_TRACE_ENABLE != 0
 STATIC CONST char *kbasep_trace_code_string[] = {
@@ -178,14 +178,14 @@ mali_error kbase_device_init(kbase_device * const kbdev)
 
 	kbase_debug_assert_register_hook(&kbasep_trace_hook_wrapper, kbdev);
 
-#ifdef CONFIG_MALI_PLATFORM_CONFIG_VEXPRESS
+#ifdef CONFIG_MALI_PLATFORM_VEXPRESS
 #ifdef CONFIG_MALI_PLATFORM_FAKE
 	/* BASE_HW_ISSUE_8408 requires a configuration with different timeouts for
 	 * the vexpress platform */
 	if (kbase_hw_has_issue(kbdev, BASE_HW_ISSUE_8408))
 		kbdev->config_attributes = config_attributes_hw_issue_8408;
 #endif				/* CONFIG_MALI_PLATFORM_FAKE */
-#endif				/* CONFIG_MALI_PLATFORM_CONFIG_VEXPRESS */
+#endif				/* CONFIG_MALI_PLATFORM_VEXPRESS */
 
 	return MALI_ERROR_NONE;
 
@@ -345,7 +345,7 @@ void kbase_report_gpu_fault(kbase_device *kbdev, int multiple)
 
 	KBASE_DEBUG_PRINT_WARN(KBASE_CORE, "GPU Fault 0x%08x (%s) at 0x%016llx", status, kbase_exception_name(status), address);
 	if (multiple)
-		KBASE_DEBUG_PRINT_WARN(KBASE_CORE, "There were multiple GPU faults - some have not been reported");
+		KBASE_DEBUG_PRINT_WARN(KBASE_CORE, "There were multiple GPU faults - some have not been reported\n");
 }
 
 void kbase_gpu_interrupt(kbase_device *kbdev, u32 val)
@@ -374,9 +374,11 @@ void kbase_gpu_interrupt(kbase_device *kbdev, u32 val)
 		mali_bool cores_are_available;
 		unsigned long flags;
 
+		KBASE_TIMELINE_PM_CHECKTRANS(kbdev, SW_FLOW_PM_CHECKTRANS_GPU_INTERRUPT_START);
 		spin_lock_irqsave(&kbdev->pm.power_change_lock, flags);
 		cores_are_available = kbase_pm_check_transitions_nolock(kbdev);
 		spin_unlock_irqrestore(&kbdev->pm.power_change_lock, flags);
+		KBASE_TIMELINE_PM_CHECKTRANS(kbdev, SW_FLOW_PM_CHECKTRANS_GPU_INTERRUPT_END);
 
 		if (cores_are_available) {
 			/* Fast-path Job Scheduling on PM IRQ */
@@ -565,8 +567,10 @@ struct trace_seq_state {
 void *kbasep_trace_seq_start(struct seq_file *s, loff_t *pos)
 {
 	struct trace_seq_state *state = s->private;
+	int i;
 
-	if (*pos >= KBASE_TRACE_SIZE)
+	i = (state->start + *pos) & KBASE_TRACE_MASK;
+	if (i >= state-> end)
 		return NULL;
 
 	return state;
@@ -579,11 +583,13 @@ void kbasep_trace_seq_stop(struct seq_file *s, void *data)
 void *kbasep_trace_seq_next(struct seq_file *s, void *data, loff_t *pos)
 {
 	struct trace_seq_state *state = s->private;
-	int i = (state->start + *pos) & KBASE_TRACE_MASK;
-	if (i == state->end)
-		return NULL;
+	int i;
 
 	(*pos)++;
+
+	i = (state->start + *pos) & KBASE_TRACE_MASK;
+	if (i >= state->end)
+		return NULL;
 
 	return &state->trace_buf[i];
 }
